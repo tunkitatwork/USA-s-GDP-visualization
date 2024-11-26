@@ -1,0 +1,310 @@
+---
+title: "GDP for United States"
+output: 
+  flexdashboard::flex_dashboard:
+    social: menu
+    storyboard: true
+---
+
+```{r setup, include=FALSE}
+library(fredr)
+library(plotly)
+library(flexdashboard)
+library(dplyr)
+library(tidyquant)
+
+api_key <- "02b259c5d031dd945f53a97cbc614d30"
+fredr_set_key(api_key)
+```
+
+### GDP (Quarterly)
+
+```{r}
+GDP_US <- fredr(series_id = "GDP", frequency = "q", observation_start = as.Date("2000-01-01"), observation_end = as.Date("2022-12-31"))
+GDP_US$date <- as.Date(GDP_US$date)
+GDP_US$country <- "United States"
+
+plot_ly(data = GDP_US, x = ~date, y = ~value, type = 'scatter', mode = 'lines', line = list(color = 'steelblue', width = 2)) %>%
+  layout(
+    yaxis = list(title = "GDP (billion of dollars)"),
+    xaxis = list(title = "Year"),
+    showlegend = FALSE,
+    title = "GDP for United States (2000-2022)",
+    font = list(family = "serif"))
+```
+***
+Mô tả: \n\
+Biểu đồ xu hướng GDP giai đoạn 2000-2022. \n\ 
+Có thể thấy GDP tăng trưởng nhanh chóng từ năm 2000 đến năm 2022. Sự tăng trưởng này được chia thành 3 giai đoạn: \n\
+- Giai đoạn 1 (2000-2008): tăng từ 10002,18 tỷ USD vào năm 2000 lên 14899 tỷ USD vào năm 2008 sau đó có sự sụt giảm nhẹ vào năm 2009. \n\
+- Giai đoạn 2 (2009-2019): tăng từ 14608,21 tỷ USD vào năm 2009 lên 21902,39 tỷ USD vào năm 2019 và giảm nhiều ở năm 2020. \n\
+- Giai đoạn 3 (2020-nay): tăng từ 19913,14 tỷ USD vào năm 2020 lên 26408,41 tỷ USD vào năm 2022. \n\
+Sự sụt giảm vào 2 năm 2009 và năm 2020 có thể kể đến những lý do như: \n\
+- Cuộc khủng hoảng kinh tế năm 2008 kéo hiệu ứng đuôi dài, làm cho nền kinh tế năm 2009 bị ảnh hưởng nghiêm trọng. \n\
+- Đại dịch Covid-19 gây ảnh hưởng toàn cầu, năm 2020 là năm đánh dấu sự ảm đạm của nền kinh tế khi công nông thương nghiệp và dịch vụ đều bị ảnh hưởng nghiêm trọng. Nền kinh tế toàn cầu bị chững lại, ảnh hưởng nặng nề nhất thuộc về hai cường quốc Mỹ và Trung Quốc. \n\
+Nhìn chung, dù có những tác động tiêu cực từ nhiều lý do khác nhau nhưng Mỹ vẫn là một trong những quốc gia có kinh tế phát triển hàng đầu trong khu vực cũng như Thế Giới. Trong tương lai, Mỹ được dự đoán sẽ phát triển vượt bậc do những đổi mới trong công nghệ, cũng như những chính sách tích cực được sử dụng trong tương lai. 
+
+### GDP Comparison
+
+```{r}
+get_country_gdp <- function(country_code, start_date, end_date) {
+  series_id <- paste0("MKTGDP", country_code, "A646NWDB")
+  gdp_data <- fredr(series_id = series_id, frequency = "a", observation_start = start_date, observation_end = end_date)
+  return(gdp_data)
+}
+gdp_us <- fredr(series_id = "GDPA", frequency = "a", observation_start = as.Date("2010-01-01"), observation_end = as.Date("2022-01-01"))
+gdp_us$value <- gdp_us$value * 1000000000
+
+gdp_cn <- get_country_gdp("CN", as.Date("2010-01-01"), as.Date("2022-01-01"))  # China
+gdp_jp <- get_country_gdp("JP", as.Date("2010-01-01"), as.Date("2022-01-01"))  # Japan
+gdp_de <- get_country_gdp("DE", as.Date("2010-01-01"), as.Date("2022-01-01"))  # Germany
+
+combined_data <- data.frame(
+  Date = gdp_us$date,
+  US_GDP = gdp_us$value,
+  China_GDP = gdp_cn$value,
+  Japan_GDP = gdp_jp$value,
+  Germany_GDP = gdp_de$value
+)
+
+world_gdp <- fredr(series_id = "NYGDPMKTPCDWLD", frequency = "a", observation_start = as.Date("2010-01-01"), observation_end = as.Date("2022-01-01"))
+
+combined_data <- merge(combined_data, world_gdp, by.x = "Date", by.y = "date", all = TRUE)
+
+plot_ly(combined_data, x = ~Date) %>%
+  add_trace(y = ~value, name ="World GDP", type ='bar',marker = list(color ="steelblue")) %>%
+  add_trace(y = ~US_GDP, name ="US GDP", type ='bar',marker = list(color ="#DBA979")) %>%
+  add_trace(y = ~China_GDP, name ="China GDP", type ='bar',marker = list(color ="#AFD198")) %>%
+  add_trace(y = ~Japan_GDP, name ="Japan GDP", type ='bar',marker = list(color ="#db6777")) %>%
+  add_trace(y = ~Germany_GDP, name ="Germany GDP", type ='bar',marker = list(color ="#ca78d6")) %>%
+  layout(
+    barmode = 'group',
+    title = "Comparison of GDP between the US, China, Japan, Germany, and the World",
+    xaxis = list(title = "Year"),
+    yaxis = list(title = "GDP (billion dollars)"),
+    font = list(family = "serif"))
+```
+***
+Mô tả: \n\
+Biểu đồ so sánh GDP Thế Giới so với các quốc gia Mỹ, Trung Quốc, Đức và Nhật Bản
+Biểu đồ thể hiện sự tăng trưởng GDP (theo đơn vị nghìn tỷ USD) của Thế Giới, Mỹ, Trung Quốc, Nhật và Đức.\n\
+GDP của Mỹ có tỷ trọng cao nhất, chiếm 24% tỷ trọng GDP toàn cầu. Đứng thứ hai là Trung Quốc với 17%, thứ ba là Nhật (6%), thứ 4 là Đức (5%). \n\
+Nhìn chung, giai đoạn từ năm 2010-2022, GDP Thế Giới tăng trưởng nhanh, từ 68 nghìn tỷ USD lên 102 nghìn tỷ USD, GDP của Mỹ tăng từ 15 nghìn tỷ USD lên 28 nghìn tỷ USD. \n\
+Bên cạnh đó, GDP của Trung Quốc, Đức, Nhật cũng có sự tăng trưởng rõ rệt. 
+Điều này cho thấy sự ảnh hưởng của các yếu tố kinh tế, chính trị, xã hội và môi trường đến tăng trưởng kinh tế. Có thể kể đến như sự phát triển vượt bậc của công nghệ, sự toàn cầu hoá, sự thay đổi cơ cấu kinh tế từ nông nghiệp sang hướng công nghiệp và dịch vụ. \n\
+Tốc độ tăng trưởng GDP không đồng đều, đặc biệt ở giai đoạn 2019-2022. Một trong những lý do làm tốc độ tăng trưởng ở giai đoạn này bị chững lại là ảnh hưởng của đại dịch Covid-19 lên toàn cầu, đặc biệt là ở Mỹ và Trung Quốc. Sau giai đoạn khó khăn này, kinh tế toàn cầu đã có những dấu hiệu khởi sắc, GDP cũng có dấu hiệu tăng trưởng. Nói cách khác, bất chấp chiến tranh thương mại, đại dịch, lạm phát và phân cực trong xã hội, Mỹ vẫn gia tăng sức mạnh kinh tế so với phần còn lại thế giới nếu xét theo cách so sánh đơn giản này.
+
+### Inflation, consumer prices
+```{r}
+Infla_con <- fredr(series_id = "FPCPITOTLZGUSA", frequency = "a", observation_start = as.Date("2000-01-01"), observation_end = as.Date("2024-01-01"))
+Infla_con <- Infla_con %>%
+  rename(percent = 'value') %>%
+  mutate(price = percent / 100) %>%
+  mutate(change = percent - lag(percent)) 
+
+plot_ly(Infla_con, x = ~date) %>%
+  add_lines(y = ~change, line = list(color = "steelblue", width = 1)) %>%
+  add_bars(y = ~percent, opacity = 0.2, marker = list(color = "red")) %>%
+  layout(
+    xaxis = list(title = "Date"),
+    yaxis = list(title = "Change, Percent", side = "left"),
+    yaxis2 = list(title = "Percent", side = "right", overlaying = "y"),
+    title = "Inflation, Consumer Prices for US",
+    showlegend = FALSE,
+    barmode = "overlay",
+    plot_bgcolor = "rgba(0,0,0,0)",
+    paper_bgcolor = "rgba(0,0,0,0)",
+    font = list(family = "serif"),
+    margin = list(l = 60, r = 60, t = 60, b = 60)
+  )
+```
+***
+Mô tả: \n\
+Biểu đồ trong cho thấy tỷ lệ lạm phát, giá tiêu dùng của Mỹ trong giai đoạn từ năm 2000-2022. \n\
+Cụ thể: \n\
+- Tỷ lệ lạm phát, giá tiêu dùng của Mỹ có xu hướng tăng từ năm 2000 đến năm 2022. Tuy nhiên, xu hướng tăng không liên tục. Năm 2009 là năm có tỷ lệ lạm phát, giá tiêu dùng là -0,356%. \n\
+- Tỷ lệ lạm phát, giá tiêu dùng tăng nhanh nhất trong giai đoạn từ năm 2000 đến năm 2008, sau đó chậm lại trong giai đoạn từ năm 2008 đến năm 2012, và tăng trở lại trong giai đoạn từ năm 2012 đến năm 2022. \n\
+- Đường xu hướng tăng trưởng cũng lên xuống do sự thay đổi về tỷ lệ lạm phát, giá tiêu dùng không đồng đều. \n\
+Có một số nguyên nhân có thể giải thích cho xu hướng tăng này. Một nguyên nhân có thể là do sự gia tăng giá cả hàng hóa và dịch vụ. Một nguyên nhân khác có thể là do sự gia tăng lượng tiền lưu thông trong nền kinh tế.
+
+### Population Growth
+
+```{r}
+Population_USA_data <- fredr(series_id = "SPPOPGROWUSA", frequency = "a", observation_start = as.Date("2000-01-01"), observation_end = as.Date("2022-01-01"))
+
+Population_USA_data$date <- as.Date(Population_USA_data$date)
+
+blue_tone <- "#c4e7f2"
+plot_ly(Population_USA_data, x = ~date, y = ~value, type = "scatter", mode = "none", fill = "tozeroy", fillcolor = I(blue_tone)) %>%
+  layout( xaxis = list(title = "Year"),
+          yaxis = list(title = "Percent Change at Annual Rate"),
+          title = "Population Growth of the United States (2000 - 2022)",
+          font = list(family = "serif"),
+          showlegend = FALSE,
+          plot_bgcolor = "white",
+          paper_bgcolor = "white")
+
+```
+***
+Mô tả: \n\
+Biểu đồ tỷ lệ gia tăng dân số từ năm 2000-2022. \n\
+Tỷ lệ gia tăng dân số tỷ nhiên của Mỹ có xu hướng giảm dần trong thập kỷ qua. Từ 1,113% vào năm 2000 giảm dần xuống 0,39% vào năm 2022. Tỷ lệ gia tăng dân số cao nhất vào năm 2000 (~1,13%) và thấp nhất vào năm 2021 (~0,18%). \n\ 
+Có nhiều nguyên nhân gây nên sự sụt giảm nghiêm trọng này, có thể kể đến như:\n\
+- Cuộc khủng hoảng kinh tế vào năm 2008 làm giới trẻ Mỹ trì hoãn kế hoạch sinh con hoặc sinh con ít hơn do lo sợ các khoản nợ tiền đại học hay không thể mua nhà do điều kiện vay thế chấp khó khăn. \n\
+- Chính sách hạn chế nhập cư, cả hợp pháp lẫn bất hợp pháp làm cho dân số ngày càng già đi. \n\
+- Đại dịch Covid-19 làm kinh tế sụt giảm, tỷ lệ thất nghiệp tăng cao buộc người dân Mỹ phải trì hoãn thậm chí huỷ bỏ kế hoạch sinh con. \n\
+- Lối sống DINK càng được tiếp thu và phát triển, nhất là ở giới trẻ. \n\
+Thực trạng trên đang đặt Mỹ vào nguy cơ suy thoái dân số dẫn đến giảm chất lượng dân số và mất cân bằng dân số, dẫn đến nhiều hệ luỵ cho chính sách phát triển, an ninh xã hội và đặc biệt là ảnh hưởng tiêu cực đến nền kinh tế lớn nhất thế giới.
+
+
+### Trends of Import, Export, and Net Export
+
+```{r}
+df_im <- tq_get("IMPGSC1",get = "economic.data", from = "2000-01-01")
+df_im <- df_im %>%
+  mutate(change = price - lag(price)) %>%
+  mutate(percent_change = (lead(price) - price) / price)
+
+df_ex <- tq_get("EXPGSC1",get = "economic.data", from = "2000-01-01")
+df_ex <- df_ex %>%
+  mutate(change = price - lag(price)) %>%
+  mutate(percent_change = (lead(price) - price) / price)
+
+df_netex <- tq_get("NETEXP",get = "economic.data", from = "2000-01-01")
+df_netex <- df_netex %>%
+  mutate(change = price - lag(price)) %>%
+  mutate(percent_change = (lead(price) - price) / price)
+
+df_comp <- data.frame(df_im$date, df_im$price, df_ex$price, df_netex$price)
+df_comp <- df_comp %>%
+  rename(Date = 'df_im.date',Import = 'df_im.price', 
+         Export = 'df_ex.price', NetEx = 'df_netex.price')
+
+plot_ly(df_comp, x = ~Date) %>%
+  add_lines(y = ~Import, name = "Import") %>%
+  add_lines(y = ~Export, name = "Export") %>%
+  add_lines(y = ~NetEx, name = "Net Export") %>%
+  layout(
+    xaxis = list(title = "Year"),
+    yaxis = list(title = "Billions of Dollars"),
+    title = "Trends of Import, Export, and Net Export",
+    font = list(family = "serif")
+  )
+```
+***
+Mô tả: \n\
+Biểu đồ xu hướng xuất nhập khẩu và nhập khẩu ròng của Mỹ từ 2000-2024. \n\
+Nhìn chung, biểu đồ cho thấy sự gia tăng nhanh chóng của kim ngạch nhập khẩu và sự chậm lại của kim ngạch xuất khẩu, dẫn đến thâm hụt thương mại hàng hoá ngày càng lớn. \n\
+Cụ thể: \n\
+- Kim ngạch nhập khẩu của Mỹ tăng từ 1661,851 tỷ USD vào Quý 1 năm 2000 lên 3507,159 tỷ USD vào Quý 1 năm 2024. \n\
+- Kim ngạch xuất khẩu của Mỹ cũng tăng từ 1208,897 tỷ USD vào Quý 1 năm 2000 lên 2533,977 tỷ USD vào Quý 1 năm 2024. \n\
+- Cán cân thương mại hàng hoá của Mỹ liên tục thâm hụt vào giai đoạn này, từ -356,583 tỷ USD vào năm 2000 xuống -845,927 tỷ USD năm 2024. Thâm hụt mạnh nhất là -1089,677 tỷ USD vào Quý 1 năm 2022. \n\
+Từ đó có thể thấy, Mỹ đã trở thành một quốc gia nhập siêu. Điều này do sự tăng trưởng kinh tế mạnh mẽ của Mỹ và nhu cầu tiêu dùng ngày càng lớn. Mỹ cũng là một quốc gia có công nghệ phát triển vượt bậc, cho nên kim ngạch xuất khẩu của Mỹ cũng tăng trưởng mạnh mẽ. Cán cân thương mại thâm hụt mạnh cũng do nhiều nguyên nhân như cơ cấu kinh tế, tỷ giá hối đoái, chính sách thương mại.
+
+### Comparison of State GDP with Total GDP in the USA
+
+```{r}
+columns <- c('State_Name', 'State', 'GDP_Index', 'Unemployment_Rate')
+dfFred <- data.frame(matrix(ncol = length(columns)))
+colnames(dfFred) <- columns
+state_codes <- state.abb
+state_names <- state.name
+
+for (i in 1:length(state_codes)) {
+  code <- state_codes[i]
+  series_id_gdp <- paste0(code, "RQGSP")
+  series_id_unem <- paste0(code, "UR")
+  start_date <- as.Date("2023-10-01")
+  end_date <- as.Date("2023-10-01")
+  dfFred[i, 'State_Name'] <- state_names[i]
+  dfFred[i, 'State'] <- code
+
+  gdp_data <- fredr(series_id = series_id_gdp, observation_start = start_date, observation_end = end_date)
+  dfFred[i, 'GDP_Index'] <- gdp_data[nrow(gdp_data), "value"]
+  
+  unem_data <- fredr(series_id = series_id_unem, observation_start = start_date, observation_end = end_date)
+  dfFred[i, 'Unemployment_Rate'] <- unem_data[nrow(unem_data), "value"]
+}
+
+plot_ly(
+  type = "treemap",
+  labels = dfFred$State_Name,
+  parents = rep("USA", nrow(dfFred)),
+  values = dfFred$GDP_Index,
+  text = ~paste("GDP Index: ", dfFred$GDP_Index, "<br>"),
+  hoverinfo = "text",
+  colors = c("#DBA979", "#ECCA9C", "#E8EFCF", "#AFD198", "#77B0AA", "#135D66")
+) %>% 
+  layout(
+    hoverlabel = list(bgcolor = "white", bordercolor = "black"),
+    title = "Comparison of State GDP with Total GDP in the USA",
+    font = list(family = "serif"),
+    titlefont = list(size = 15, face = "bold"),
+    xaxis_titlefont = list(size = 12, face = "italic"),
+    yaxis_titlefont = list(size = 12, face = "italic"),
+    margin = list(l = 50, r = 50, t = 50, b = 50))
+
+```
+***
+Mô tả: \n\
+Biểu đồ treemap so sánh GDP giữa các tiểu bang ở Mỹ \n\
+Góp phần GDP lớn nhất vào GDP tổng thể của Mỹ là tiểu bang California (GDP index 3276362), tiếp sau đó là tiểu bang Texas (2076609,1), New York (1788903,3)…. Thấp nhất là ở các tiểu bang Wyoming (40049,1), Vermont (35462,4). \n\
+Có tất cả 14 tiểu bang có GDP index lớn hơn 500000, 36 tiểu bang còn lại thì GDP index từ 35000-434000. Sự chênh lệch GDP index giữa các tiểu bang phản ánh sự phát triển kinh tế không đồng đều giữa các tiểu bang. Các tiểu bang ở bờ biển phía đông và bờ biển phía tây thường có GDP bình quân đầu người cao hơn các tiểu bang ở miền trung và miền nam. \n\
+Một số yếu tố ảnh hưởng đến sự phát triển kinh tế bao gồm nguồn lực thiên nhiên, vị trí địa lý…..
+
+### GDP Index and Unemployment Rate by State in the USA
+
+```{r}
+colorscale <- list(c(0, "rgb(211, 230, 242)"), c(1, "rgb(6, 49, 89)")) 
+plot_geo(dfFred, locationmode = "USA-states") %>%
+  add_trace(
+    z = ~GDP_Index, # Sử dụng GDP_Index
+    locations = ~State,
+    text = ~paste("State: ", State_Name, "<br>GDP Index: ", GDP_Index, "<br>Unemployment Rate: ", Unemployment_Rate, "%"),
+    colorscale = colorscale,
+    colorbar = list(title = "GDP Index", len = 1)
+  ) %>%
+  layout(
+    geo = list(scope = "usa"),
+    hoverlabel = list(bgcolor = "white", bordercolor = "black"),
+    hoverinfo = "text",
+    title = "GDP Index and Unemployment Rate by State in the USA",
+    font = list(family = "serif"),
+    titlefont = list(size = 15, face = "bold"),
+    xaxis_titlefont = list(size = 12, face = "italic"),
+    yaxis_titlefont = list(size = 12, face = "italic"),
+    margin = list(l = 50, r = 50, t = 50, b = 50))
+
+```
+***
+Mô tả: \n\
+Biểu đồ so sánh GDP và tỷ lệ thất nghiệp giữa tiểu các bang của Mỹ \n\
+Cụ thể: \n\
+- GDP cao nhất ở tiểu bang California (3,276 triệu USD), thấp nhất là ở tiểu bang Vermont (35,4624 nghìn USD). \n\
+- Tỷ lệ thất nghiệp cao nhất ở tiểu bang Nevada (5,3%), thấp nhất ở tiểu bang Bắc Dakota (1,9%). \n\
+- Tiểu bang California vừa có GDP cao, vừa có tỷ lệ thất nghiệp cao. \n\
+Các tiểu bang có sự chênh lệch lớn về GDP cho thấy sự khác biệt về mức độ phát triển kinh tế giữa các bang. Ngoài ra, còn một số yếu tố khác như nguồn lực thiên nhiên (tiểu bang có nhiều tài nguyên thiên nhiên thường có GDP cao hơn), vị trí địa lý (các tiểu bang ở ven biển hoặc nằm trên tuyến đường thương mại thường có GDP cao hơn), cơ sở hạ tầng, chất lượng giáo dục….
+
+### Unemployment Rate and GDP of the Top 10 States
+
+```{r}
+dfFred_sorted <- dfFred[order(dfFred$GDP_Index, decreasing = TRUE), ]
+top_10_states <- head(dfFred_sorted, 10)
+
+plot_ly(data = top_10_states, x = ~State_Name) %>%
+  add_trace(y = ~GDP_Index, name = "GDP", type = "bar", marker = list(color = "steelblue")) %>%
+  add_trace(y = ~Unemployment_Rate, name = "Unemployment Rate", type = "scatter", mode = "lines", line = list(color = "#db6777"), yaxis = "y2") %>%
+  layout(xaxis = list(title = "State", categoryorder = "array", categoryarray = top_10_states$State_Name), 
+         yaxis = list(title = "GDP"),
+         yaxis2 = list(overlaying = "y", side = "right", title = "Unemployment Rate (%)"),
+         title = "Unemployment Rate and GDP of the Top 10 States",
+         font = list(family = "serif"),
+         barmode = "stack")
+```
+***
+Mô tả:\n\
+Biều đồ thể hiện 10 tiểu bang có GDP cao nhất với thứ tự giảm dần đi kèm là tỷ lệ thất nghiệp tương ứng với từng tiểu bang. \n\
+Tiểu bang California có mức độ tăng tưởng GDP cao nhất cũng là nơi có mức độ thất nghiệp cao nhất. Do nền kinh tế công nghệ cao, tập trung nhiều tập đoàn lớn (Apple, Google,...). Mật độ dân cư lớn mà nhu cầu lao động ít dẫn đến sự chênh lệch giữa nhu cầu và nguồn cung việc làm.\n\
+Trong khi tiểu bang Florida và Georgia dù có mức độ tăng trưởng GDP trung bình nhưng là nơi tỷ lệ thất nghiệp thấp nhất do nền kinh tế đa dạng và phát triển ở nhiều ngành (du lịch, xây dựng, nông nghiệp, khoa học, y tế,...) \n\
+Đặc biệt tiểu bang Illinois và New Jersey chỉ đạt ngưỡng 3.5M GDP nhưng có tỷ lệ thất nghiệp cao gần bằng tiểu bang California. Do tập trung nhiều công ty lớn nhưng kỹ năng lao động chưa phù hợp với nhu cầu thị trường.
+
